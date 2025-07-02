@@ -1,2 +1,16 @@
-# Auto detect text files and perform LF normalization
+# Указываем, что все текстовые файлы должны нормализоваться к LF в репозитории
 * text=auto
+
+# Принудительно указываем LF для скриптов и кода (чтобы избежать проблем в Linux/macOS)
+*.sh text eol=lf
+*.bash text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+
+# Для Windows-специфичных файлов (например, .bat, .cmd) оставляем CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
