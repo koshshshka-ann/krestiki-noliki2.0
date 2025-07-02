@@ -12,19 +12,22 @@ O_COLOR = "#4444ff"  # Синий для O
 WIN_COLOR = "#44ff44"  # Зеленый для победной линии
 RESET_COLOR = "#dddddd"
 TEXT_COLOR = "#333333"
+SCORE_COLOR = "#666666"
 
 # Настройки игры
 DEFAULT_PLAYER_SYMBOL = "X"
+WINNING_SCORE = 3
 
 window = tk.Tk()
 window.title("Крестики-нолики")
-window.geometry("320x450")
+window.geometry("320x500")  # Увеличили высоту для отображения счета
 window.configure(bg=BG_COLOR)
 
 # Шрифты
 title_font = tkfont.Font(family="Arial", size=16, weight="bold")
 button_font = tkfont.Font(family="Arial", size=14)
 symbol_font = tkfont.Font(family="Arial", size=24, weight="bold")
+score_font = tkfont.Font(family="Arial", size=12)
 
 # Переменные игры
 current_player = DEFAULT_PLAYER_SYMBOL
@@ -33,6 +36,21 @@ computer_symbol = "O"
 buttons = []
 game_active = False
 win_combination = []
+player_score = 0
+computer_score = 0
+round_number = 1
+
+
+def init_scoreboard():
+    global score_label
+    score_label = tk.Label(game_frame,
+                           text=f"Раунд {round_number} | Вы: {player_score}  Компьютер: {computer_score}",
+                           font=score_font, bg=BG_COLOR, fg=SCORE_COLOR)
+    score_label.grid(row=4, column=0, columnspan=3, pady=(5, 10))
+
+
+def update_scoreboard():
+    score_label.config(text=f"Раунд {round_number} | Вы: {player_score}  Компьютер: {computer_score}")
 
 
 def choose_symbol(symbol):
@@ -42,6 +60,7 @@ def choose_symbol(symbol):
     current_player = "X"
     game_active = True
     start_game()
+    init_scoreboard()
     if current_player == computer_symbol:
         computer_move()
 
@@ -51,7 +70,7 @@ def start_game():
     game_frame.pack(fill="both", expand=True)
 
 
-def reset_game():
+def reset_round():
     global current_player, game_active, win_combination
     current_player = "X"
     game_active = True
@@ -63,7 +82,6 @@ def reset_game():
 
     if player_symbol == "O":
         computer_move()
-
 
 def check_winner():
     global win_combination
@@ -90,7 +108,6 @@ def check_winner():
 def highlight_winner():
     for (i, j) in win_combination:
         buttons[i][j].config(bg=WIN_COLOR)
-    # Блокируем кнопки после победы
     for row in buttons:
         for button in row:
             button.config(state=tk.DISABLED)
@@ -98,15 +115,6 @@ def highlight_winner():
 
 def is_draw():
     return all(button["text"] != "" for row in buttons for button in row)
-
-
-def end_game(message):
-    global game_active
-    game_active = False
-    if check_winner():
-        highlight_winner()
-    messagebox.showinfo("Игра окончена", message)
-
 
 def computer_move():
     global current_player
@@ -126,9 +134,9 @@ def computer_move():
         buttons[row][col].config(fg=O_COLOR if computer_symbol == "O" else X_COLOR)
 
         if check_winner():
-            end_game(f"Компьютер ({computer_symbol}) победил!")
+            end_round("computer")
         elif is_draw():
-            end_game("Ничья!")
+            end_round("draw")
         else:
             current_player = player_symbol
 
@@ -143,13 +151,92 @@ def on_click(row, col):
     buttons[row][col].config(fg=X_COLOR if player_symbol == "X" else O_COLOR)
 
     if check_winner():
-        end_game(f"Игрок ({player_symbol}) победил!")
+        end_round("player")
     elif is_draw():
-        end_game("Ничья!")
+        end_round("draw")
     else:
         current_player = computer_symbol
         window.after(500, computer_move)
 
+def end_game_championship(winner):
+    # Создаем отдельное окно для поздравления
+    win = tk.Toplevel(window)
+    win.title("Чемпионат окончен!")
+    win.geometry("400x200")
+    win.configure(bg=BG_COLOR)
+    win.resizable(False, False)
+
+    # Центрируем окно
+    window_width = window.winfo_width()
+    window_height = window.winfo_height()
+    screen_width = win.winfo_screenwidth()
+    screen_height = win.winfo_screenheight()
+    x = int((screen_width / 2) - (window_width / 2))
+    y = int((screen_height / 2) - (window_height / 2))
+    win.geometry(f"+{x}+{y}")
+
+    # Поздравительное сообщение
+    champion_text = "Вы - победитель чемпионата!" if winner == "player" else "Компьютер выиграл чемпионат!"
+    tk.Label(win, text=champion_text,
+             font=tkfont.Font(family="Arial", size=18, weight="bold"),
+             bg=BG_COLOR, fg=X_COLOR if winner == "player" else O_COLOR).pack(pady=20)
+
+    # Финальный счет
+    score_text = f"Финальный счет: {player_score}:{computer_score}"
+    tk.Label(win, text=score_text,
+             font=tkfont.Font(family="Arial", size=14),
+             bg=BG_COLOR, fg=SCORE_COLOR).pack(pady=10)
+
+    # Кнопка для закрытия
+    tk.Button(win, text="Закрыть", font=button_font,
+              command=win.destroy, bg=RESET_COLOR, fg=TEXT_COLOR,
+              activebackground=BUTTON_ACTIVE_COLOR).pack(pady=10)
+
+    # Делаем модальным окном
+    win.grab_set()
+    win.focus_set()
+
+def reset_game():
+    global player_score, computer_score, round_number
+    player_score = 0
+    computer_score = 0
+    round_number = 1
+    reset_round()
+    update_scoreboard()
+
+
+def end_round(winner):
+    global game_active, player_score, computer_score, round_number
+
+    game_active = False
+    if check_winner():
+        highlight_winner()
+
+    # Обновляем счет
+    if winner == "player":
+        player_score += 1
+    elif winner == "computer":
+        computer_score += 1
+
+    round_number += 1
+    update_scoreboard()
+
+    # Проверяем, достигнут ли выигрышный счет
+    if player_score >= WINNING_SCORE or computer_score >= WINNING_SCORE:
+        final_winner = "player" if player_score >= WINNING_SCORE else "computer"
+        end_game_championship(final_winner)
+        reset_game()
+    else:
+        # Показываем результат раунда
+        if winner == "draw":
+            messagebox.showinfo("Раунд окончен", "Ничья!")
+        else:
+            winner_name = "Вы" if winner == "player" else "Компьютер"
+            messagebox.showinfo("Раунд окончен",
+                                f"{winner_name} выиграли раунд!\n\nТекущий счет: {player_score}:{computer_score}")
+
+        # Запускаем новый раунд
+        window.after(1000, reset_round)
 
 # Фрейм для выбора символа
 symbol_frame = tk.Frame(window, bg=BG_COLOR)
